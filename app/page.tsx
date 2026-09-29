@@ -60,8 +60,8 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#f7f9fc] px-4 pb-8 pt-5 dark:bg-slate-950">
-      <div className="mx-auto max-w-md">
+    <main className="min-h-screen bg-[#f7f9fc] px-4 pb-28 pt-5 dark:bg-slate-950">
+      <div className="mx-auto flex max-w-md flex-col gap-6">
         <header className="mb-6 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Good morning</p>
@@ -112,8 +112,15 @@ export default function HomePage() {
           </div>
         </section>
 
-      {/* Feature Cards */}
-      <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+      <section aria-labelledby="tools-heading">
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">Your toolkit</p>
+            <h2 id="tools-heading" className="mt-1 text-lg font-bold text-slate-950 dark:text-white">Support when you need it</h2>
+          </div>
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">4 tools</span>
+        </div>
+      <div className="grid grid-cols-2 gap-3">
         {features.map((feature, index) => (
           <Link key={feature.title} href={feature.href}>
             <Card
@@ -131,12 +138,11 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
+      </section>
 
-      {/* Quick Actions */}
-      <div className="mt-8 max-w-md mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md">
-          <h3 className="font-semibold text-[#2c3e50] dark:text-white mb-3 text-center">Quick Actions</h3>
-          <div className="space-y-2">
+      <section aria-labelledby="quick-actions-heading" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 id="quick-actions-heading" className="mb-3 text-sm font-bold text-slate-950 dark:text-white">Quick actions</h2>
+        <div className="flex flex-col gap-2">
             <Link href="/guardian">
               <Button
                 variant="outline"
@@ -164,10 +170,9 @@ export default function HomePage() {
                 Guardian Grid Network
               </Button>
             </Link>
-          </div>
         </div>
-      </div>
-      </div>
+      </section>
     </div>
+  </main>
   )
 }
