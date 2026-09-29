@@ -1,9 +1,14 @@
-import { Shield, MapPin, AlertTriangle, BookOpen, Users } from "lucide-react"
+"use client"
+
+import { Shield, MapPin, AlertTriangle, BookOpen, Users, ChevronRight, Sparkles, UserRound } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 export default function HomePage() {
+  const { user } = useAuth()
+  const firstName = user?.email?.split("@")[0] || "there"
   const features = [
     {
       icon: Shield,
@@ -40,15 +45,33 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen p-4">
-      {/* Header */}
-      <div className="text-center mb-8 pt-8">
-        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#2c3e50] to-[#3498db] rounded-full flex items-center justify-center">
-          <Shield className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-2xl font-bold text-[#2c3e50] dark:text-white mb-2">Welcome to HerSafety</h1>
-        <p className="text-gray-600 dark:text-gray-300 text-sm px-4">You are not alone. We're here to keep you safe.</p>
-      </div>
+    <div className="min-h-screen bg-[#f7f9fc] px-4 pb-8 pt-5 dark:bg-slate-950">
+      <div className="mx-auto max-w-md">
+        <header className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Good morning</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">Hi, {firstName}</h1>
+          </div>
+          <Link href="/settings" aria-label="Open profile" className="flex size-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-white dark:ring-slate-800">
+            <UserRound className="size-5" />
+          </Link>
+        </header>
+
+        <section className="mb-6 overflow-hidden rounded-3xl bg-slate-950 p-5 text-white shadow-xl shadow-slate-300/40 dark:bg-slate-900 dark:shadow-none">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
+                <Sparkles className="size-3.5" /> Your safety centre
+              </div>
+              <h2 className="text-xl font-semibold leading-tight">Stay aware. Stay connected.</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Real-time tools for safer routes, trusted guardians, and fast help.</p>
+            </div>
+            <Shield className="size-10 shrink-0 text-blue-300" />
+          </div>
+          <Link href="/sos" className="mt-5 flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-blue-50">
+            Open emergency help <ChevronRight className="size-4" />
+          </Link>
+        </section>
 
       {/* Feature Cards */}
       <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
@@ -104,6 +127,7 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

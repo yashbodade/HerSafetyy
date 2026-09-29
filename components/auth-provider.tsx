@@ -13,6 +13,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   isConfigured: boolean
@@ -69,6 +70,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
   }
 
+  const signInWithGoogle = async () => {
+    if (!isConfigured) {
+      throw new Error("Supabase is not configured. Please connect Supabase to enable Google sign-in.")
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+          `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw error
+  }
+
   const signUp = async (email: string, password: string) => {
     if (!isConfigured) {
       throw new Error("Supabase is not configured. Please add your Supabase credentials.")
@@ -91,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       signIn,
+      signInWithGoogle,
       signOut,
       signUp,
       isConfigured,
