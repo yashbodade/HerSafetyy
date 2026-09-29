@@ -213,6 +213,10 @@ export default function SafeRoutePage() {
   }
 
   const findSafeRoute = async () => {
+    if (!TOMTOM_API_KEY) {
+      toast({ title: "Map service unavailable", description: "Add a valid TomTom key in project settings.", variant: "destructive" })
+      return
+    }
     if (!destination.trim()) {
       toast({
         title: "Error",
@@ -263,8 +267,12 @@ export default function SafeRoutePage() {
 
       setRoute(processedRoute)
 
-      // Display route on map
-      displayRouteOnMap(route)
+      // Display route on map after the SDK has completed its first render.
+      if (mapInstanceRef.current) {
+        displayRouteOnMap(route)
+      } else {
+        window.setTimeout(() => displayRouteOnMap(route), 500)
+      }
 
       toast({
         title: "Safe Route Found",
@@ -334,7 +342,10 @@ export default function SafeRoutePage() {
   }
 
   const displayRouteOnMap = (route: any) => {
-    if (!mapInstanceRef.current) return
+    if (!mapInstanceRef.current) {
+      toast({ title: "Map is still loading", description: "Your route was calculated. The map will show it when ready." })
+      return
+    }
 
     // Clear existing route
     if (mapInstanceRef.current.getLayer("route")) {
