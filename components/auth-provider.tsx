@@ -114,7 +114,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isConfigured) {
       throw new Error("Supabase is not configured. Please add your Supabase credentials.")
     }
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+          `${window.location.origin}/auth/callback`,
+      },
+    })
     if (error) throw error
   }
 
