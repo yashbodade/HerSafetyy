@@ -24,7 +24,7 @@ export default function SharedRoutePage() {
   const mapInstanceRef = useRef<any>(null)
   const searchParams = useSearchParams()
 
-  const TOMTOM_API_KEY = "K3y9wO0hvDw2Wqh9xydEhEOo3f25KTVA"
+  const TOMTOM_API_KEY = process.env.NEXT_PUBLIC_TOMTOM_API_KEY ?? ""
 
   useEffect(() => {
     const origin = searchParams.get("origin")
@@ -39,6 +39,7 @@ export default function SharedRoutePage() {
 
   const loadTomTomMap = async () => {
     try {
+      if (!TOMTOM_API_KEY) return
       if (!window.tt) {
         const script = document.createElement("script")
         script.src = "https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"
@@ -64,10 +65,11 @@ export default function SharedRoutePage() {
       mapInstanceRef.current = window.tt.map({
         key: TOMTOM_API_KEY,
         container: mapRef.current,
-        center: [77.209, 28.6139], // Delhi coordinates
+        center: [77.209, 28.6139],
         zoom: 12,
         style: "main",
       })
+      mapInstanceRef.current.on("error", () => console.warn("TomTom shared map tile error"))
 
       mapInstanceRef.current.on("load", () => {
         if (routeData) {
