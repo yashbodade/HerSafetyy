@@ -51,7 +51,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadUserData()
-  }, [])
+  }, [user?.id, user?.name, user?.email])
 
   const loadUserData = async () => {
     setProfile({

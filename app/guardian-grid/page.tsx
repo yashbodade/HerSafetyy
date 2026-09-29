@@ -74,18 +74,17 @@ export default function GuardianGridPage() {
       const tileCode = generateTileCode(position.lat, position.lng)
 
       // Activate Guardian Grid
-      await fetch("/api/guardian/activate", {
+      const activationResponse = await fetch("/api/guardian/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          location: position,
-          tileCode,
-          settings,
-        }),
+        body: JSON.stringify({ location: position, tileCode, settings }),
       })
+      if (!activationResponse.ok) throw new Error("Guardian service unavailable")
 
-      // Start monitoring systems
-      await startAudioMonitoring()
+      // Audio is an optional enhancement; location-based guardian presence still works without a microphone.
+      await startAudioMonitoring().catch(() => {
+        setIsListening(false)
+      })
       startMotionDetection()
       startLocationTracking()
 
@@ -96,8 +95,8 @@ export default function GuardianGridPage() {
         lastUpdate: new Date().toLocaleString(),
       }))
 
-      // Fetch nearby guardians
-      fetchNearbyGuardians()
+      // Fetch nearby guardians after location state has been updated.
+      fetchNearbyGuardians(position)
 
       toast({
         title: "Guardian Grid Activated",
@@ -377,13 +376,14 @@ export default function GuardianGridPage() {
     }
   }
 
-  const fetchNearbyGuardians = async () => {
+  const fetchNearbyGuardians = async (currentLocation: { lat: number; lng: number }) => {
     try {
       const response = await fetch("/api/guardian/nearby", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location }),
+        body: JSON.stringify({ location: currentLocation }),
       })
+      if (!response.ok) throw new Error("Nearby guardian service unavailable")
 
       if (response.ok) {
         const data = await response.json()

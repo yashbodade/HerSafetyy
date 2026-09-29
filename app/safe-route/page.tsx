@@ -31,6 +31,7 @@ export default function SafeRoutePage() {
   const [route, setRoute] = useState<RouteData | null>(null)
   const [loading, setLoading] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [mapError, setMapError] = useState(false)
   const [originSuggestions, setOriginSuggestions] = useState<LocationSuggestion[]>([])
   const [destinationSuggestions, setDestinationSuggestions] = useState<LocationSuggestion[]>([])
   const [showOriginSuggestions, setShowOriginSuggestions] = useState(false)
@@ -47,6 +48,10 @@ export default function SafeRoutePage() {
   useEffect(() => {
     getCurrentLocation()
     loadTomTomMap()
+    const timeoutId = window.setTimeout(() => {
+      if (!mapInstanceRef.current || !mapLoaded) setMapError(true)
+    }, 10000)
+    return () => window.clearTimeout(timeoutId)
   }, [])
 
   const loadTomTomMap = async () => {
@@ -56,7 +61,12 @@ export default function SafeRoutePage() {
         const script = document.createElement("script")
         script.src = "https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"
         script.onload = initializeMap
+        script.onerror = () => setMapError(true)
         document.head.appendChild(script)
+
+        window.setTimeout(() => {
+          if (!mapLoaded) setMapError(true)
+        }, 10000)
 
         const link = document.createElement("link")
         link.rel = "stylesheet"
@@ -536,12 +546,22 @@ export default function SafeRoutePage() {
         <Card className="mb-6">
           <CardContent className="p-0">
             <div ref={mapRef} className="w-full h-64 rounded-lg" />
-            {!mapLoaded && (
+            {!mapLoaded && !mapError && (
               <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                   <p className="text-sm text-gray-600">Loading map...</p>
                 </div>
+              </div>
+            )}
+            {mapError && (
+              <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg bg-slate-100 p-6 text-center dark:bg-slate-900">
+                <MapPin className="size-8 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">Map preview unavailable</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">You can still plan a route and open it in Google Maps.</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer")}>Open Google Maps</Button>
               </div>
             )}
           </CardContent>

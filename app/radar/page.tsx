@@ -28,12 +28,13 @@ export default function RadarPage() {
 
   useEffect(() => {
     getCurrentLocation()
-    fetchThreatAlerts()
-
-    // Set up real-time updates
-    const interval = setInterval(fetchThreatAlerts, 30000) // Update every 30 seconds
-    return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    fetchThreatAlerts()
+    const interval = window.setInterval(fetchThreatAlerts, 30000)
+    return () => window.clearInterval(interval)
+  }, [userLocation])
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -262,7 +263,12 @@ export default function RadarPage() {
                     <Button size="sm" variant="outline" onClick={() => shareLocation(alert.id)} className="flex-1">
                       Share My Location
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 bg-transparent"
+                      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${alert.location.lat},${alert.location.lng}`, "_blank", "noopener,noreferrer")}
+                    >
                       Get Directions
                     </Button>
                   </div>

@@ -72,9 +72,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser((current) => current ? { ...current, name: profile.name } : current)
       return
     }
-    const { data, error } = await supabase.auth.updateUser({ data: { full_name: profile.name, phone: profile.phone } })
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: {
+        full_name: profile.name?.trim() || undefined,
+        phone: profile.phone?.trim() || undefined,
+      },
+    })
     if (error) throw error
-    if (data.user) setUser({ id: data.user.id, email: data.user.email, name: data.user.user_metadata?.full_name, avatarUrl: data.user.user_metadata?.avatar_url, guardianEnabled: data.user.user_metadata?.guardian_enabled ?? false })
+    if (data.user) {
+      setUser((current) => current ? {
+        ...current,
+        name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || current.name,
+        avatarUrl: data.user.user_metadata?.avatar_url || current.avatarUrl,
+      } : current)
+    }
   }
 
   const setGuardianEnabled = async (enabled: boolean) => {
