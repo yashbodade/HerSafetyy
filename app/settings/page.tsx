@@ -47,19 +47,18 @@ export default function SettingsPage() {
 
   const [showAddContact, setShowAddContact] = useState(false)
   const { toast } = useToast()
-  const { user, isConfigured } = useAuth()
+  const { user, isConfigured, updateProfile, setGuardianEnabled } = useAuth()
 
   useEffect(() => {
     loadUserData()
   }, [])
 
   const loadUserData = async () => {
-    // Mock data - in real app, fetch from Supabase
     setProfile({
-      name: "Demo User",
-      email: user?.email || "demo@hersafety.app",
-      phone: "+91 98765 43210",
-      address: "New Delhi, India",
+      name: user?.name || user?.email?.split("@")[0] || "",
+      email: user?.email || "",
+      phone: "",
+      address: "",
     })
 
     setEmergencyContacts([
@@ -82,7 +81,7 @@ export default function SettingsPage() {
 
   const saveProfile = async () => {
     try {
-      // In real app, save to Supabase
+      await updateProfile({ name: profile.name, phone: profile.phone })
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
@@ -396,6 +395,14 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6 border-blue-100 bg-blue-50/60 dark:border-blue-950 dark:bg-blue-950/30">
+          <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="size-5 text-blue-600" /> Guardian network</CardTitle></CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div><p className="font-medium">Be available nearby</p><p className="text-xs text-muted-foreground">Help another member when you are close. Your exact location is never shown.</p></div>
+            <Switch checked={user?.guardianEnabled ?? false} onCheckedChange={(checked) => setGuardianEnabled(checked)} aria-label="Enable guardian network" />
           </CardContent>
         </Card>
 

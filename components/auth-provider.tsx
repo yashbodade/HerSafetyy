@@ -7,11 +7,16 @@ import { createClient } from "@/lib/supabase"
 interface User {
   id: string
   email?: string
+  name?: string
+  avatarUrl?: string
+  guardianEnabled?: boolean
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
+  updateProfile: (profile: { name?: string; phone?: string }) => Promise<void>
+  setGuardianEnabled: (enabled: boolean) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
@@ -47,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ? { id: session.user.id, email: session.user.email } : null)
+      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false } : null)
       setLoading(false)
     })
 
@@ -55,12 +60,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? { id: session.user.id, email: session.user.email } : null)
+      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false } : null)
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [isConfigured, supabase.auth])
+
+  const updateProfile = async (profile: { name?: string; phone?: string }) => {
+    if (!isConfigured) {
+      setUser((current) => current ? { ...current, name: profile.name } : current)
+      return
+    }
+    const { data, error } = await supabase.auth.updateUser({ data: { full_name: profile.name, phone: profile.phone } })
+    if (error) throw error
+    if (data.user) setUser({ id: data.user.id, email: data.user.email, name: data.user.user_metadata?.full_name, avatarUrl: data.user.user_metadata?.avatar_url, guardianEnabled: data.user.user_metadata?.guardian_enabled ?? false })
+  }
+
+  const setGuardianEnabled = async (enabled: boolean) => {
+    if (!isConfigured) {
+      setUser((current) => current ? { ...current, guardianEnabled: enabled } : current)
+      return
+    }
+    const { data, error } = await supabase.auth.updateUser({ data: { guardian_enabled: enabled } })
+    if (error) throw error
+    if (data.user) setUser((current) => current ? { ...current, guardianEnabled: enabled } : current)
+  }
 
   const signIn = async (email: string, password: string) => {
     if (!isConfigured) {
@@ -106,6 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       loading,
+      updateProfile,
+      setGuardianEnabled,
       signIn,
       signInWithGoogle,
       signOut,
