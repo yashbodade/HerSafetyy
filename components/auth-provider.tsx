@@ -96,11 +96,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...current,
         name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || current.name,
         avatarUrl: data.user.user_metadata?.avatar_url || current.avatarUrl,
-        phone: data.user.user_metadata?.phone,
-        address: data.user.user_metadata?.address,
-        emergencyContacts: data.user.user_metadata?.emergency_contacts,
-        preferences: data.user.user_metadata?.preferences,
+        phone: data.user.user_metadata?.phone ?? current.phone,
+        address: data.user.user_metadata?.address ?? current.address,
+        emergencyContacts: data.user.user_metadata?.emergency_contacts ?? current.emergencyContacts,
+        preferences: data.user.user_metadata?.preferences ?? current.preferences,
         userMetadata: data.user.user_metadata,
+        guardianEnabled: data.user.user_metadata?.guardian_enabled ?? current.guardianEnabled,
       } : current)
     }
   }
@@ -116,10 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    if (!isConfigured) {
-      throw new Error("Supabase is not configured. Please add your Supabase credentials.")
-    }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!email.trim() || !password) throw new Error("Email and password are required.")
+    if (!isConfigured) throw new Error("Authentication is temporarily unavailable.")
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
     if (error) throw error
   }
 
@@ -139,11 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
-    if (!isConfigured) {
-      throw new Error("Supabase is not configured. Please add your Supabase credentials.")
-    }
+    if (!email.trim() || password.length < 8) throw new Error("Use a valid email and a password with at least 8 characters.")
+    if (!isConfigured) throw new Error("Authentication is temporarily unavailable.")
     const { error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
       options: {
         emailRedirectTo:

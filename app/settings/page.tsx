@@ -52,10 +52,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadUserData()
-  }, [user?.id, user?.name, user?.email])
+  }, [user])
 
   const loadUserData = async () => {
-    const metadata = (user as unknown as { user_metadata?: Record<string, unknown> })?.user_metadata ?? {}
+    const metadata = user?.userMetadata ?? {}
     setProfile({
       name: user?.name || user?.email?.split("@")[0] || "",
       email: user?.email || "",
@@ -115,7 +115,9 @@ export default function SettingsPage() {
 
     const nextContacts = [...emergencyContacts, contact]
     setEmergencyContacts(nextContacts)
-    void updateProfile({ emergencyContacts: nextContacts })
+    void updateProfile({ emergencyContacts: nextContacts }).catch(() => {
+      toast({ title: "Contact could not be saved", description: "Try saving your profile again.", variant: "destructive" })
+    })
     setNewContact({ name: "", phone: "", relationship: "" })
     setShowAddContact(false)
 
@@ -128,7 +130,9 @@ export default function SettingsPage() {
   const removeEmergencyContact = (id: string) => {
     const nextContacts = emergencyContacts.filter((contact) => contact.id !== id)
     setEmergencyContacts(nextContacts)
-    void updateProfile({ emergencyContacts: nextContacts })
+    void updateProfile({ emergencyContacts: nextContacts }).catch(() => {
+      toast({ title: "Contact could not be removed", description: "Try again.", variant: "destructive" })
+    })
     toast({
       title: "Contact Removed",
       description: "Emergency contact has been removed.",
@@ -138,7 +142,9 @@ export default function SettingsPage() {
   const updatePreference = (key: string, value: boolean | string) => {
     const nextPreferences = { ...preferences, [key]: value }
     setPreferences(nextPreferences)
-    void updateProfile({ preferences: nextPreferences })
+    void updateProfile({ preferences: nextPreferences }).catch(() => {
+      toast({ title: "Preference could not be saved", description: "Try again.", variant: "destructive" })
+    })
 
     // Save preferences
     toast({
