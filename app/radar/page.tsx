@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, MapPin, Clock, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase"
+import Link from "next/link"
 
 interface ThreatAlert {
   id: string
@@ -186,6 +187,18 @@ export default function RadarPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
+
+        <Card className="mb-6 border-orange-200 bg-orange-50/70 dark:border-orange-900 dark:bg-orange-950/20">
+          <CardContent className="flex items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-semibold text-slate-900 dark:text-white">See something unsafe?</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">Send a verified incident report with location details.</p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/report">Report</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">

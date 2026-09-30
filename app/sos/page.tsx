@@ -27,7 +27,7 @@ export default function SOSPage() {
   const [locationError, setLocationError] = useState<string>("")
   const [gettingLocation, setGettingLocation] = useState(false)
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { user, updateProfile } = useAuth()
 
   useEffect(() => {
     loadEmergencyContacts()
@@ -41,6 +41,7 @@ export default function SOSPage() {
 
   const saveEmergencyContacts = (contacts: EmergencyContact[]) => {
     setEmergencyContacts(contacts)
+    void updateProfile({ emergencyContacts: contacts })
   }
 
   const getCurrentLocation = () => {

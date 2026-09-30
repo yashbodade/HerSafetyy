@@ -93,6 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...current,
         name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || current.name,
         avatarUrl: data.user.user_metadata?.avatar_url || current.avatarUrl,
+        phone: data.user.user_metadata?.phone,
+        address: data.user.user_metadata?.address,
+        emergencyContacts: data.user.user_metadata?.emergency_contacts,
+        preferences: data.user.user_metadata?.preferences,
+        userMetadata: data.user.user_metadata,
       } : current)
     }
   }
