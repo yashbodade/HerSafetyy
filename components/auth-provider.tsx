@@ -58,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false, phone: session.user.user_metadata?.phone, address: session.user.user_metadata?.address, emergencyContacts: session.user.user_metadata?.emergency_contacts, preferences: session.user.user_metadata?.preferences, userMetadata: session.user.user_metadata } : null)
+    }).catch(() => {
+      setUser(null)
+    }).finally(() => {
       setLoading(false)
     })
 
@@ -146,6 +149,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo:
           process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
           `${window.location.origin}/auth/callback`,
+        data: {
+          full_name: email.split("@")[0],
+        },
       },
     })
     if (error) throw error
