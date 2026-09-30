@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, MapPin, Clock, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { createClient } from "@/lib/supabase"
 
 interface ThreatAlert {
   id: string
@@ -33,7 +34,15 @@ export default function RadarPage() {
   useEffect(() => {
     fetchThreatAlerts()
     const interval = window.setInterval(fetchThreatAlerts, 30000)
-    return () => window.clearInterval(interval)
+    const supabase = createClient()
+    const channel = supabase
+      .channel("public-safety-alerts")
+      .on("broadcast", { event: "threat-updated" }, () => void fetchThreatAlerts())
+      .subscribe()
+    return () => {
+      window.clearInterval(interval)
+      void supabase.removeChannel(channel)
+    }
   }, [userLocation])
 
   const getCurrentLocation = () => {

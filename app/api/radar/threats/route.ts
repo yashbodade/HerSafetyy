@@ -94,8 +94,16 @@ export async function POST(request: NextRequest) {
       },
     ]
 
-    // Simulate API processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const toRadians = (value: number) => (value * Math.PI) / 180
+    const distanceInKm = (lat: number, lng: number) => {
+      if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") return 0
+      const earthRadius = 6371
+      const dLat = toRadians(lat - location.lat)
+      const dLng = toRadians(lng - location.lng)
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(location.lat)) * Math.cos(toRadians(lat)) * Math.sin(dLng / 2) ** 2
+      return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    }
+    const alerts = mockThreats.map((alert) => ({ ...alert, distance: Number(distanceInKm(alert.location.lat, alert.location.lng).toFixed(1)) }))
 
     return NextResponse.json({
       success: true,

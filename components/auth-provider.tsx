@@ -10,12 +10,17 @@ interface User {
   name?: string
   avatarUrl?: string
   guardianEnabled?: boolean
+  phone?: string
+  address?: string
+  emergencyContacts?: Array<{ id: string; name: string; phone: string; relationship: string; priority?: number }>
+  preferences?: Record<string, unknown>
+  userMetadata?: Record<string, unknown>
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  updateProfile: (profile: { name?: string; phone?: string }) => Promise<void>
+  updateProfile: (profile: { name?: string; phone?: string; address?: string; emergencyContacts?: unknown[]; preferences?: Record<string, unknown> }) => Promise<void>
   setGuardianEnabled: (enabled: boolean) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
@@ -52,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false } : null)
+      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false, phone: session.user.user_metadata?.phone, address: session.user.user_metadata?.address, emergencyContacts: session.user.user_metadata?.emergency_contacts, preferences: session.user.user_metadata?.preferences, userMetadata: session.user.user_metadata } : null)
       setLoading(false)
     })
 
@@ -60,14 +65,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false } : null)
+      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false, phone: session.user.user_metadata?.phone, address: session.user.user_metadata?.address, emergencyContacts: session.user.user_metadata?.emergency_contacts, preferences: session.user.user_metadata?.preferences, userMetadata: session.user.user_metadata } : null)
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [isConfigured, supabase.auth])
 
-  const updateProfile = async (profile: { name?: string; phone?: string }) => {
+  const updateProfile = async (profile: { name?: string; phone?: string; address?: string; emergencyContacts?: unknown[]; preferences?: Record<string, unknown> }) => {
     if (!isConfigured) {
       setUser((current) => current ? { ...current, name: profile.name } : current)
       return
@@ -77,6 +82,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: {
         full_name: profile.name?.trim() || undefined,
         phone: profile.phone?.trim() || undefined,
+        address: profile.address?.trim() || undefined,
+        emergency_contacts: profile.emergencyContacts,
+        preferences: profile.preferences,
       },
     })
     if (error) throw error

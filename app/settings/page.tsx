@@ -46,6 +46,7 @@ export default function SettingsPage() {
   })
 
   const [showAddContact, setShowAddContact] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
   const { toast } = useToast()
   const { user, isConfigured, updateProfile, setGuardianEnabled } = useAuth()
 
@@ -54,44 +55,45 @@ export default function SettingsPage() {
   }, [user?.id, user?.name, user?.email])
 
   const loadUserData = async () => {
+    const metadata = (user as unknown as { user_metadata?: Record<string, unknown> })?.user_metadata ?? {}
     setProfile({
       name: user?.name || user?.email?.split("@")[0] || "",
       email: user?.email || "",
-      phone: "",
-      address: "",
+      phone: typeof metadata.phone === "string" ? metadata.phone : "",
+      address: typeof metadata.address === "string" ? metadata.address : "",
     })
-
-    setEmergencyContacts([
-      {
-        id: "1",
-        name: "Emergency Contact 1",
-        phone: "+91 98765 43210",
-        relationship: "Family",
-        priority: 1,
-      },
-      {
-        id: "2",
-        name: "Emergency Contact 2",
-        phone: "+91 87654 32109",
-        relationship: "Friend",
-        priority: 2,
-      },
-    ])
+    setEmergencyContacts(Array.isArray(metadata.emergency_contacts) ? metadata.emergency_contacts as EmergencyContact[] : [])
+    if (metadata.preferences && typeof metadata.preferences === "object") {
+      setPreferences((current) => ({ ...current, ...(metadata.preferences as Partial<typeof current>) }))
+    }
   }
 
   const saveProfile = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Sign in before saving profile details.", variant: "destructive" })
+      return
+    }
+    setSavingProfile(true)
     try {
-      await updateProfile({ name: profile.name, phone: profile.phone })
+      await updateProfile({
+        name: profile.name,
+        phone: profile.phone,
+        address: profile.address,
+        emergencyContacts,
+        preferences,
+      })
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
       })
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
+        title: "Profile could not be saved",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -111,7 +113,9 @@ export default function SettingsPage() {
       priority: emergencyContacts.length + 1,
     }
 
-    setEmergencyContacts([...emergencyContacts, contact])
+    const nextContacts = [...emergencyContacts, contact]
+    setEmergencyContacts(nextContacts)
+    void updateProfile({ emergencyContacts: nextContacts })
     setNewContact({ name: "", phone: "", relationship: "" })
     setShowAddContact(false)
 
@@ -122,7 +126,9 @@ export default function SettingsPage() {
   }
 
   const removeEmergencyContact = (id: string) => {
-    setEmergencyContacts(emergencyContacts.filter((contact) => contact.id !== id))
+    const nextContacts = emergencyContacts.filter((contact) => contact.id !== id)
+    setEmergencyContacts(nextContacts)
+    void updateProfile({ emergencyContacts: nextContacts })
     toast({
       title: "Contact Removed",
       description: "Emergency contact has been removed.",
@@ -130,7 +136,9 @@ export default function SettingsPage() {
   }
 
   const updatePreference = (key: string, value: boolean | string) => {
-    setPreferences((prev) => ({ ...prev, [key]: value }))
+    const nextPreferences = { ...preferences, [key]: value }
+    setPreferences(nextPreferences)
+    void updateProfile({ preferences: nextPreferences })
 
     // Save preferences
     toast({
@@ -178,12 +186,8 @@ export default function SettingsPage() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Email</label>
-              <Input
-                type="email"
-                value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                placeholder="Enter your email"
-              />
+                <Input type="email" value={profile.email} readOnly aria-describedby="email-help" />
+                <p id="email-help" className="mt-1 text-xs text-muted-foreground">Email is managed by your sign-in provider.</p>
             </div>
 
             <div>
@@ -205,8 +209,8 @@ export default function SettingsPage() {
               />
             </div>
 
-            <Button onClick={saveProfile} className="w-full">
-              Save Profile
+            <Button onClick={saveProfile} className="w-full" disabled={savingProfile || !user}>
+              {savingProfile ? "Saving…" : "Save Profile"}
             </Button>
           </CardContent>
         </Card>

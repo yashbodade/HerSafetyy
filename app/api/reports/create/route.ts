@@ -23,8 +23,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient()
 
-    // Insert report into database
-    const { data, error } = await supabase
+    // Public incident reporting requires a server-only service-role client so anonymous submissions can be stored while RLS remains enabled.
+    const { createClient: createAdminClient } = await import("@supabase/supabase-js")
+    const admin = process.env.SUPABASE_SERVICE_ROLE_KEY
+      ? createAdminClient(process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY)
+      : supabase
+
+    const { data, error } = await admin
       .from("incident_reports")
       .insert([
         {
