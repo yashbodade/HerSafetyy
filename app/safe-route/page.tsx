@@ -31,6 +31,7 @@ export default function SafeRoutePage() {
   const [route, setRoute] = useState<RouteData | null>(null)
   const [loading, setLoading] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [mapError, setMapError] = useState(false)
   const [originSuggestions, setOriginSuggestions] = useState<LocationSuggestion[]>([])
   const [destinationSuggestions, setDestinationSuggestions] = useState<LocationSuggestion[]>([])
   const [showOriginSuggestions, setShowOriginSuggestions] = useState(false)
@@ -42,20 +43,29 @@ export default function SafeRoutePage() {
   const { toast } = useToast()
 
   // TomTom API Key
-  const TOMTOM_API_KEY = "K3y9wO0hvDw2Wqh9xydEhEOo3f25KTVA"
+  const TOMTOM_API_KEY = process.env.NEXT_PUBLIC_TOMTOM_API_KEY ?? ""
 
   useEffect(() => {
     getCurrentLocation()
     loadTomTomMap()
+    const timeoutId = window.setTimeout(() => {
+      if (!mapInstanceRef.current) setMapError(true)
+    }, 15000)
+    return () => window.clearTimeout(timeoutId)
   }, [])
 
   const loadTomTomMap = async () => {
     try {
+      if (!TOMTOM_API_KEY) {
+        setMapError(true)
+        return
+      }
       // Load TomTom Maps SDK
       if (!window.tt) {
         const script = document.createElement("script")
         script.src = "https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"
         script.onload = initializeMap
+        script.onerror = () => setMapError(true)
         document.head.appendChild(script)
 
         const link = document.createElement("link")
@@ -77,10 +87,12 @@ export default function SafeRoutePage() {
       mapInstanceRef.current = window.tt.map({
         key: TOMTOM_API_KEY,
         container: mapRef.current,
-        center: [77.209, 28.6139], // Delhi coordinates
+        center: [77.209, 28.6139],
         zoom: 12,
         style: "main",
       })
+      setMapLoaded(true)
+      mapInstanceRef.current.on("error", () => setMapError(true))
 
       mapInstanceRef.current.on("load", () => {
         setMapLoaded(true)
@@ -201,6 +213,10 @@ export default function SafeRoutePage() {
   }
 
   const findSafeRoute = async () => {
+    if (!TOMTOM_API_KEY) {
+      toast({ title: "Map service unavailable", description: "Add a valid TomTom key in project settings.", variant: "destructive" })
+      return
+    }
     if (!destination.trim()) {
       toast({
         title: "Error",
@@ -251,8 +267,12 @@ export default function SafeRoutePage() {
 
       setRoute(processedRoute)
 
-      // Display route on map
-      displayRouteOnMap(route)
+      // Display route on map after the SDK has completed its first render.
+      if (mapInstanceRef.current) {
+        displayRouteOnMap(route)
+      } else {
+        window.setTimeout(() => displayRouteOnMap(route), 500)
+      }
 
       toast({
         title: "Safe Route Found",
@@ -322,7 +342,10 @@ export default function SafeRoutePage() {
   }
 
   const displayRouteOnMap = (route: any) => {
-    if (!mapInstanceRef.current) return
+    if (!mapInstanceRef.current) {
+      toast({ title: "Map is still loading", description: "Your route was calculated. The map will show it when ready." })
+      return
+    }
 
     // Clear existing route
     if (mapInstanceRef.current.getLayer("route")) {
@@ -536,12 +559,22 @@ export default function SafeRoutePage() {
         <Card className="mb-6">
           <CardContent className="p-0">
             <div ref={mapRef} className="w-full h-64 rounded-lg" />
-            {!mapLoaded && (
+            {!mapLoaded && !mapError && (
               <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                   <p className="text-sm text-gray-600">Loading map...</p>
                 </div>
+              </div>
+            )}
+            {mapError && (
+              <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg bg-slate-100 p-6 text-center dark:bg-slate-900">
+                <MapPin className="size-8 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">Map preview unavailable</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">You can still plan a route and open it in Google Maps.</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => window.open("https://www.google.com/maps", "_blank", "noopener,noreferrer")}>Open Google Maps</Button>
               </div>
             )}
           </CardContent>

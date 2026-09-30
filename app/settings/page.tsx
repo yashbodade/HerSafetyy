@@ -46,53 +46,54 @@ export default function SettingsPage() {
   })
 
   const [showAddContact, setShowAddContact] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
   const { toast } = useToast()
-  const { user, isConfigured } = useAuth()
+  const { user, isConfigured, updateProfile, setGuardianEnabled } = useAuth()
 
   useEffect(() => {
     loadUserData()
-  }, [])
+  }, [user])
 
   const loadUserData = async () => {
-    // Mock data - in real app, fetch from Supabase
+    const metadata = user?.userMetadata ?? {}
     setProfile({
-      name: "Demo User",
-      email: user?.email || "demo@hersafety.app",
-      phone: "+91 98765 43210",
-      address: "New Delhi, India",
+      name: user?.name || user?.email?.split("@")[0] || "",
+      email: user?.email || "",
+      phone: typeof metadata.phone === "string" ? metadata.phone : "",
+      address: typeof metadata.address === "string" ? metadata.address : "",
     })
-
-    setEmergencyContacts([
-      {
-        id: "1",
-        name: "Emergency Contact 1",
-        phone: "+91 98765 43210",
-        relationship: "Family",
-        priority: 1,
-      },
-      {
-        id: "2",
-        name: "Emergency Contact 2",
-        phone: "+91 87654 32109",
-        relationship: "Friend",
-        priority: 2,
-      },
-    ])
+    setEmergencyContacts(Array.isArray(metadata.emergency_contacts) ? metadata.emergency_contacts as EmergencyContact[] : [])
+    if (metadata.preferences && typeof metadata.preferences === "object") {
+      setPreferences((current) => ({ ...current, ...(metadata.preferences as Partial<typeof current>) }))
+    }
   }
 
   const saveProfile = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Sign in before saving profile details.", variant: "destructive" })
+      return
+    }
+    setSavingProfile(true)
     try {
-      // In real app, save to Supabase
+      await updateProfile({
+        name: profile.name,
+        phone: profile.phone,
+        address: profile.address,
+        emergencyContacts,
+        preferences,
+      })
       toast({
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
       })
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
+        title: "Profile could not be saved",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -112,7 +113,11 @@ export default function SettingsPage() {
       priority: emergencyContacts.length + 1,
     }
 
-    setEmergencyContacts([...emergencyContacts, contact])
+    const nextContacts = [...emergencyContacts, contact]
+    setEmergencyContacts(nextContacts)
+    void updateProfile({ emergencyContacts: nextContacts }).catch(() => {
+      toast({ title: "Contact could not be saved", description: "Try saving your profile again.", variant: "destructive" })
+    })
     setNewContact({ name: "", phone: "", relationship: "" })
     setShowAddContact(false)
 
@@ -123,7 +128,11 @@ export default function SettingsPage() {
   }
 
   const removeEmergencyContact = (id: string) => {
-    setEmergencyContacts(emergencyContacts.filter((contact) => contact.id !== id))
+    const nextContacts = emergencyContacts.filter((contact) => contact.id !== id)
+    setEmergencyContacts(nextContacts)
+    void updateProfile({ emergencyContacts: nextContacts }).catch(() => {
+      toast({ title: "Contact could not be removed", description: "Try again.", variant: "destructive" })
+    })
     toast({
       title: "Contact Removed",
       description: "Emergency contact has been removed.",
@@ -131,7 +140,11 @@ export default function SettingsPage() {
   }
 
   const updatePreference = (key: string, value: boolean | string) => {
-    setPreferences((prev) => ({ ...prev, [key]: value }))
+    const nextPreferences = { ...preferences, [key]: value }
+    setPreferences(nextPreferences)
+    void updateProfile({ preferences: nextPreferences }).catch(() => {
+      toast({ title: "Preference could not be saved", description: "Try again.", variant: "destructive" })
+    })
 
     // Save preferences
     toast({
@@ -179,12 +192,8 @@ export default function SettingsPage() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Email</label>
-              <Input
-                type="email"
-                value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                placeholder="Enter your email"
-              />
+                <Input type="email" value={profile.email} readOnly aria-describedby="email-help" />
+                <p id="email-help" className="mt-1 text-xs text-muted-foreground">Email is managed by your sign-in provider.</p>
             </div>
 
             <div>
@@ -206,8 +215,8 @@ export default function SettingsPage() {
               />
             </div>
 
-            <Button onClick={saveProfile} className="w-full">
-              Save Profile
+            <Button onClick={saveProfile} className="w-full" disabled={savingProfile || !user}>
+              {savingProfile ? "Saving…" : "Save Profile"}
             </Button>
           </CardContent>
         </Card>
@@ -396,6 +405,14 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6 border-blue-100 bg-blue-50/60 dark:border-blue-950 dark:bg-blue-950/30">
+          <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="size-5 text-blue-600" /> Guardian network</CardTitle></CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div><p className="font-medium">Be available nearby</p><p className="text-xs text-muted-foreground">Help another member when you are close. Your exact location is never shown.</p></div>
+            <Switch checked={user?.guardianEnabled ?? false} onCheckedChange={(checked) => setGuardianEnabled(checked)} aria-label="Enable guardian network" />
           </CardContent>
         </Card>
 

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, MapPin, Clock, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { createClient } from "@/lib/supabase"
+import Link from "next/link"
 
 interface ThreatAlert {
   id: string
@@ -28,12 +30,21 @@ export default function RadarPage() {
 
   useEffect(() => {
     getCurrentLocation()
-    fetchThreatAlerts()
-
-    // Set up real-time updates
-    const interval = setInterval(fetchThreatAlerts, 30000) // Update every 30 seconds
-    return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    fetchThreatAlerts()
+    const interval = window.setInterval(fetchThreatAlerts, 30000)
+    const supabase = createClient()
+    const channel = supabase
+      .channel("public-safety-alerts")
+      .on("broadcast", { event: "threat-updated" }, () => void fetchThreatAlerts())
+      .subscribe()
+    return () => {
+      window.clearInterval(interval)
+      void supabase.removeChannel(channel)
+    }
+  }, [userLocation])
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -177,6 +188,18 @@ export default function RadarPage() {
           </Button>
         </div>
 
+        <Card className="mb-6 border-orange-200 bg-orange-50/70 dark:border-orange-900 dark:bg-orange-950/20">
+          <CardContent className="flex items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-semibold text-slate-900 dark:text-white">See something unsafe?</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">Send a verified incident report with location details.</p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/report">Report</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card>
@@ -262,7 +285,12 @@ export default function RadarPage() {
                     <Button size="sm" variant="outline" onClick={() => shareLocation(alert.id)} className="flex-1">
                       Share My Location
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 bg-transparent"
+                      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${alert.location.lat},${alert.location.lng}`, "_blank", "noopener,noreferrer")}
+                    >
                       Get Directions
                     </Button>
                   </div>

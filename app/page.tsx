@@ -1,9 +1,29 @@
-import { Shield, MapPin, AlertTriangle, BookOpen, Users } from "lucide-react"
+"use client"
+
+import { useEffect, useState } from "react"
+import { Shield, MapPin, AlertTriangle, BookOpen, Users, ChevronRight, Sparkles, UserRound, LocateFixed, CheckCircle2 } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 export default function HomePage() {
+  const { user } = useAuth()
+  const [locationReady, setLocationReady] = useState(false)
+  const [locationLabel, setLocationLabel] = useState("Location access is off")
+  const firstName = user?.email?.split("@")[0] || "there"
+
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationReady(true)
+        setLocationLabel("Location is ready for SafeRoute")
+      },
+      () => setLocationLabel("Enable location for safer routes"),
+      { enableHighAccuracy: false, timeout: 8000 },
+    )
+  }, [])
   const features = [
     {
       icon: Shield,
@@ -40,18 +60,67 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen p-4">
-      {/* Header */}
-      <div className="text-center mb-8 pt-8">
-        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#2c3e50] to-[#3498db] rounded-full flex items-center justify-center">
-          <Shield className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-2xl font-bold text-[#2c3e50] dark:text-white mb-2">Welcome to HerSafety</h1>
-        <p className="text-gray-600 dark:text-gray-300 text-sm px-4">You are not alone. We're here to keep you safe.</p>
-      </div>
+    <main className="min-h-screen bg-[#f7f9fc] px-4 pb-28 pt-5 dark:bg-slate-950">
+      <div className="mx-auto flex max-w-md flex-col gap-6">
+        <header className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Good morning</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">Hi, {firstName}</h1>
+          </div>
+          <Link href="/settings" aria-label="Open profile" className="flex size-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-white dark:ring-slate-800">
+            <UserRound className="size-5" />
+          </Link>
+        </header>
 
-      {/* Feature Cards */}
-      <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+        <section className="mb-6 overflow-hidden rounded-3xl bg-slate-950 p-5 text-white shadow-xl shadow-slate-300/40 dark:bg-slate-900 dark:shadow-none">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
+                <Sparkles className="size-3.5" /> Your safety centre
+              </div>
+              <h2 className="text-xl font-semibold leading-tight">Stay aware. Stay connected.</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Real-time tools for safer routes, trusted guardians, and fast help.</p>
+            </div>
+            <Shield className="size-10 shrink-0 text-blue-300" />
+          </div>
+          <Link href="/sos" className="mt-5 flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-blue-50">
+            Open emergency help <ChevronRight className="size-4" />
+          </Link>
+        </section>
+
+        <section className="mb-6 grid grid-cols-[1fr_auto] items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${locationReady ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50" : "bg-amber-50 text-amber-600 dark:bg-amber-950/50"}`}>
+              {locationReady ? <CheckCircle2 className="size-5" /> : <LocateFixed className="size-5" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Live safety status</p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">{locationLabel}</p>
+            </div>
+          </div>
+          <Link href="/safe-route" className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Open map</Link>
+        </section>
+
+        <section className="mb-6 rounded-3xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-950 dark:bg-blue-950/30">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white"><Users className="size-5" /></div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Become a Guardian</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">Opt in to help nearby members when they need support. Your exact location stays private.</p>
+              <Link href="/guardian-grid" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-700 dark:text-blue-300">Review settings <ChevronRight className="size-3.5" /></Link>
+            </div>
+          </div>
+        </section>
+
+      <section aria-labelledby="tools-heading">
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">Your toolkit</p>
+            <h2 id="tools-heading" className="mt-1 text-lg font-bold text-slate-950 dark:text-white">Support when you need it</h2>
+          </div>
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">4 tools</span>
+        </div>
+      <div className="grid grid-cols-2 gap-3">
         {features.map((feature, index) => (
           <Link key={feature.title} href={feature.href}>
             <Card
@@ -69,12 +138,11 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
+      </section>
 
-      {/* Quick Actions */}
-      <div className="mt-8 max-w-md mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md">
-          <h3 className="font-semibold text-[#2c3e50] dark:text-white mb-3 text-center">Quick Actions</h3>
-          <div className="space-y-2">
+      <section aria-labelledby="quick-actions-heading" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 id="quick-actions-heading" className="mb-3 text-sm font-bold text-slate-950 dark:text-white">Quick actions</h2>
+        <div className="flex flex-col gap-2">
             <Link href="/guardian">
               <Button
                 variant="outline"
@@ -102,9 +170,9 @@ export default function HomePage() {
                 Guardian Grid Network
               </Button>
             </Link>
-          </div>
         </div>
-      </div>
+      </section>
     </div>
+  </main>
   )
 }

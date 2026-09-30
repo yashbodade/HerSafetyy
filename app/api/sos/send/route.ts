@@ -4,7 +4,12 @@ export async function POST(request: NextRequest) {
   try {
     const { location, address, emergencyContacts, message, timestamp } = await request.json()
 
-    console.log("Emergency alert triggered:", { location, address, timestamp })
+    if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") {
+      return NextResponse.json({ error: "A valid location is required" }, { status: 400 })
+    }
+    if (!Array.isArray(emergencyContacts) || emergencyContacts.length === 0) {
+      return NextResponse.json({ error: "At least one guardian contact is required" }, { status: 400 })
+    }
 
     let successfulContacts = 0
     const failedContacts: string[] = []
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
 
         const smsResult = await smsResponse.json()
 
-        if (smsResult.success) {
+        if (smsResponse.ok && smsResult.success) {
           successfulContacts++
           console.log(`SMS sent successfully to ${contact.name} (${contact.phone})`)
         } else {

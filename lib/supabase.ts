@@ -29,6 +29,7 @@ function createMockSupabaseClient() {
       signInWithPassword: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
       signUp: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
       signOut: () => Promise.resolve({ error: null }),
+      exchangeCodeForSession: () => Promise.resolve({ data: { session: null }, error: null }),
     },
     from: () => ({
       insert: () => ({

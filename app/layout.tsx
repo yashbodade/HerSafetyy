@@ -1,6 +1,6 @@
 import type React from "react"
 import "./globals.css"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
@@ -14,9 +14,14 @@ export const metadata: Metadata = {
   title: "HerSafety - Women Safety App",
   description:
     "A comprehensive safety app for women in India with emergency response, AI-based behavior detection, and real-time safety intelligence.",
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
+  generator: "v0.dev"
+}
+
+export const viewport: Viewport = {
   themeColor: "#2c3e50",
-    generator: 'v0.dev'
+  width: "device-width",
+  initialScale: 1,
 }
 
 export default function RootLayout({

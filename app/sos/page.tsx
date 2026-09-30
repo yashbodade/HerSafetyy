@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { AlertTriangle, Phone, MapPin, CheckCircle, Edit, Plus, Trash2, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
 
 interface EmergencyContact {
   id: string
@@ -26,32 +27,21 @@ export default function SOSPage() {
   const [locationError, setLocationError] = useState<string>("")
   const [gettingLocation, setGettingLocation] = useState(false)
   const { toast } = useToast()
+  const { user, updateProfile } = useAuth()
 
   useEffect(() => {
     loadEmergencyContacts()
     getCurrentLocation()
-  }, [])
+  }, [user?.id, user?.emergencyContacts])
 
   const loadEmergencyContacts = () => {
-    // Load from localStorage or use defaults
-    const saved = localStorage.getItem("emergencyContacts")
-    if (saved) {
-      setEmergencyContacts(JSON.parse(saved))
-    } else {
-      // Default contacts
-      const defaultContacts: EmergencyContact[] = [
-        { id: "1", name: "Emergency Contact 1", phone: "+919876543210", relationship: "Family" },
-        { id: "2", name: "Emergency Contact 2", phone: "+918765432109", relationship: "Friend" },
-        { id: "3", name: "Emergency Contact 3", phone: "+917654321098", relationship: "Colleague" },
-      ]
-      setEmergencyContacts(defaultContacts)
-      localStorage.setItem("emergencyContacts", JSON.stringify(defaultContacts))
-    }
+    const saved = user?.emergencyContacts ?? []
+    setEmergencyContacts(saved.map((contact) => ({ ...contact, relationship: contact.relationship || "Emergency contact" })))
   }
 
   const saveEmergencyContacts = (contacts: EmergencyContact[]) => {
     setEmergencyContacts(contacts)
-    localStorage.setItem("emergencyContacts", JSON.stringify(contacts))
+    void updateProfile({ emergencyContacts: contacts })
   }
 
   const getCurrentLocation = () => {
@@ -171,8 +161,8 @@ export default function SOSPage() {
 
   const sendEmergencyAlert = async () => {
     try {
-      // Get fresh location
-      await getCurrentLocationForEmergency()
+      const freshLocation = await getCurrentLocationForEmergency()
+      const freshAddress = freshLocation.address
 
       const response = await fetch("/api/sos/send", {
         method: "POST",
@@ -180,8 +170,8 @@ export default function SOSPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          location,
-          address,
+          location: freshLocation.coords,
+          address: freshAddress,
           emergencyContacts,
           message: "🚨 EMERGENCY ALERT: I need immediate help. This is an automated message from HerSafety app.",
           timestamp: new Date().toISOString(),
@@ -209,7 +199,7 @@ export default function SOSPage() {
     }
   }
 
-  const getCurrentLocationForEmergency = (): Promise<void> => {
+  const getCurrentLocationForEmergency = (): Promise<{ coords: { lat: number; lng: number }; address: string }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject("Geolocation not supported")
@@ -224,14 +214,14 @@ export default function SOSPage() {
           }
           setLocation(coords)
 
+          let addressText = `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`
           try {
-            const addressText = await reverseGeocode(coords.lat, coords.lng)
-            setAddress(addressText)
-          } catch (error) {
-            setAddress(`${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`)
+            addressText = await reverseGeocode(coords.lat, coords.lng)
+          } catch {
+            // Coordinates remain a valid fallback when reverse geocoding is unavailable.
           }
-
-          resolve()
+          setAddress(addressText)
+          resolve({ coords, address: addressText })
         },
         reject,
         {

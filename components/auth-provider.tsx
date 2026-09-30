@@ -7,12 +7,23 @@ import { createClient } from "@/lib/supabase"
 interface User {
   id: string
   email?: string
+  name?: string
+  avatarUrl?: string
+  guardianEnabled?: boolean
+  phone?: string
+  address?: string
+  emergencyContacts?: Array<{ id: string; name: string; phone: string; relationship: string; priority?: number }>
+  preferences?: Record<string, unknown>
+  userMetadata?: Record<string, unknown>
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
+  updateProfile: (profile: { name?: string; phone?: string; address?: string; emergencyContacts?: unknown[]; preferences?: Record<string, unknown> }) => Promise<void>
+  setGuardianEnabled: (enabled: boolean) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   isConfigured: boolean
@@ -46,7 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ? { id: session.user.id, email: session.user.email } : null)
+      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false, phone: session.user.user_metadata?.phone, address: session.user.user_metadata?.address, emergencyContacts: session.user.user_metadata?.emergency_contacts, preferences: session.user.user_metadata?.preferences, userMetadata: session.user.user_metadata } : null)
+    }).catch(() => {
+      setUser(null)
+    }).finally(() => {
       setLoading(false)
     })
 
@@ -54,26 +68,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? { id: session.user.id, email: session.user.email } : null)
+      setUser(session?.user ? { id: session.user.id, email: session.user.email, name: session.user.user_metadata?.full_name || session.user.user_metadata?.name, avatarUrl: session.user.user_metadata?.avatar_url, guardianEnabled: session.user.user_metadata?.guardian_enabled ?? false, phone: session.user.user_metadata?.phone, address: session.user.user_metadata?.address, emergencyContacts: session.user.user_metadata?.emergency_contacts, preferences: session.user.user_metadata?.preferences, userMetadata: session.user.user_metadata } : null)
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [isConfigured, supabase.auth])
 
-  const signIn = async (email: string, password: string) => {
+  const updateProfile = async (profile: { name?: string; phone?: string; address?: string; emergencyContacts?: unknown[]; preferences?: Record<string, unknown> }) => {
     if (!isConfigured) {
-      throw new Error("Supabase is not configured. Please add your Supabase credentials.")
+      setUser((current) => current ? { ...current, name: profile.name } : current)
+      return
     }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: {
+        full_name: profile.name?.trim() || undefined,
+        phone: profile.phone?.trim() || undefined,
+        address: profile.address?.trim() || undefined,
+        emergency_contacts: profile.emergencyContacts,
+        preferences: profile.preferences,
+      },
+    })
+    if (error) throw error
+    if (data.user) {
+      setUser((current) => current ? {
+        ...current,
+        name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || current.name,
+        avatarUrl: data.user.user_metadata?.avatar_url || current.avatarUrl,
+        phone: data.user.user_metadata?.phone ?? current.phone,
+        address: data.user.user_metadata?.address ?? current.address,
+        emergencyContacts: data.user.user_metadata?.emergency_contacts ?? current.emergencyContacts,
+        preferences: data.user.user_metadata?.preferences ?? current.preferences,
+        userMetadata: data.user.user_metadata,
+        guardianEnabled: data.user.user_metadata?.guardian_enabled ?? current.guardianEnabled,
+      } : current)
+    }
+  }
+
+  const setGuardianEnabled = async (enabled: boolean) => {
+    if (!isConfigured) {
+      setUser((current) => current ? { ...current, guardianEnabled: enabled } : current)
+      return
+    }
+    const { data, error } = await supabase.auth.updateUser({ data: { guardian_enabled: enabled } })
+    if (error) throw error
+    if (data.user) setUser((current) => current ? { ...current, guardianEnabled: enabled } : current)
+  }
+
+  const signIn = async (email: string, password: string) => {
+    if (!email.trim() || !password) throw new Error("Email and password are required.")
+    if (!isConfigured) throw new Error("Authentication is temporarily unavailable.")
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+    if (error) throw error
+  }
+
+  const signInWithGoogle = async () => {
+    if (!isConfigured) {
+      throw new Error("Supabase is not configured. Please connect Supabase to enable Google sign-in.")
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+          `${window.location.origin}/auth/callback`,
+      },
+    })
     if (error) throw error
   }
 
   const signUp = async (email: string, password: string) => {
-    if (!isConfigured) {
-      throw new Error("Supabase is not configured. Please add your Supabase credentials.")
-    }
-    const { error } = await supabase.auth.signUp({ email, password })
+    if (!email.trim() || password.length < 8) throw new Error("Use a valid email and a password with at least 8 characters.")
+    if (!isConfigured) throw new Error("Authentication is temporarily unavailable.")
+    const { error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        emailRedirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+          `${window.location.origin}/auth/callback`,
+        data: {
+          full_name: email.split("@")[0],
+        },
+      },
+    })
     if (error) throw error
   }
 
@@ -90,7 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       loading,
+      updateProfile,
+      setGuardianEnabled,
       signIn,
+      signInWithGoogle,
       signOut,
       signUp,
       isConfigured,
